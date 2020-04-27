@@ -1,0 +1,4 @@
+.psc-ide-port
+.spago/
+ebin/
+output/
