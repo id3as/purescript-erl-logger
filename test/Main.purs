@@ -6,22 +6,20 @@ import Effect (Effect)
 import Erl.Atom (atom)
 import Erl.Data.List (nil, (:))
 import Erl.Test.EUnit (runTests, suite, test)
-import Logger (debug, doLog, error, info)
+import Logger (debug, error, info, traceMetadata)
   
 main :: Effect Unit
 main =
   void $ runTests do
     suite "Logger" do
       test "debug" do
-        debug "This is a number" {misc: 42}
-        debug "This is a string" {misc: "string"}
-        debug "Empty" {}
+        debug (traceMetadata nil "This is a number") { misc: 42}
+        debug (traceMetadata nil "This is a string") {misc: "string"}
+        debug (traceMetadata nil "Empty") {}
       test "error" do
-        error "This is a number" {misc: 42}
-        error "This is a string" {misc: "string"}
-        error "Empty" {}
-      test "doLog" do
-        doLog (atom "loggy" : atom "thing" : nil) info "Do-log" {int: 42, string: "hello"}
+        error (traceMetadata nil "This is a number") { misc: 42}
+        error (traceMetadata nil "This is a string") {misc: "string"}
+        error (traceMetadata nil "Empty") {}
 
 -- foreign import emergency :: forall a. String -> a -> Effect Unit
 -- foreign import alert     :: forall a. String -> a -> Effect Unit
