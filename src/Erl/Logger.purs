@@ -9,12 +9,15 @@ module Logger
        , debug
        , spy
        , addLoggerContext
+       , setPrimaryLevel
+       , getPrimaryLevel
        , traceMetadata
        , commandMetadata
        , eventMetadata
        , genericMetadata
        , EventType(..)
        , LogType(..)
+       , LogLevel(..)
        , MinimalMetadata
        , MinimalMetadataFields
        , BasicMetadataFields
@@ -31,6 +34,25 @@ import Erl.Data.List (List, singleton)
 import Prim.Row as Row
 import Prim.TypeError (class Warn, Text)
 import Record.Builder as Builder
+
+data LogLevel = Emergency
+              | Alert
+              | Critical
+              | Error
+              | Warning
+              | Notice
+              | Info
+              | Debug
+
+instance showLogLevel :: Show LogLevel where
+  show Emergency = "emergency"
+  show Alert = "alert"
+  show Critical = "critical"
+  show Error = "error"
+  show Warning = "warning"
+  show Notice = "notice"
+  show Info = "info"
+  show Debug = "debug"
 
 data LogType = Trace
              | Event
@@ -70,6 +92,14 @@ foreign import info :: forall metadata report. MinimalMetadata metadata -> { | r
 foreign import debug :: forall metadata report. MinimalMetadata metadata -> { | report } -> Effect Unit
 foreign import spyImpl :: forall metadata report. MinimalMetadata metadata -> { | report } -> Effect Unit
 foreign import addLoggerContext :: forall r. Record r -> Effect Unit
+foreign import getPrimaryLevelImpl :: LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> Effect LogLevel
+foreign import setPrimaryLevelImpl :: Atom -> Effect Unit
+
+getPrimaryLevel :: Effect LogLevel
+getPrimaryLevel = getPrimaryLevelImpl Emergency Alert Critical Error Warning Notice Info Debug
+
+setPrimaryLevel :: LogLevel -> Effect Unit
+setPrimaryLevel level = setPrimaryLevelImpl $ logLevelToErl level
 
 spy :: forall a. SpyWarning => String -> a -> a
 spy str a = unsafePerformEffect do
@@ -104,3 +134,13 @@ genericMetadata domain msg metadata  =
                  Builder.insert (SProxy :: SProxy "type") Trace >>>
                  Builder.insert (SProxy :: SProxy "text") msg) metadata
 
+
+logLevelToErl :: LogLevel -> Atom
+logLevelToErl Emergency = atom "emergency"
+logLevelToErl Alert = atom "alert"
+logLevelToErl Critical = atom "critical"
+logLevelToErl Error = atom "error"
+logLevelToErl Warning = atom "warning"
+logLevelToErl Notice = atom "notice"
+logLevelToErl Info = atom "info"
+logLevelToErl Debug = atom "debug"

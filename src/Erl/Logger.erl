@@ -10,7 +10,9 @@
          info/2,
          debug/2,
          spyImpl/2,
-         addLoggerContext/1
+         addLoggerContext/1,
+         getPrimaryLevelImpl/8,
+         setPrimaryLevelImpl/1
         ]).
 
 -define(do_effectful_log(Level, Metadata, Report),
@@ -65,9 +67,29 @@ addLoggerContext(LoggerContext) ->
       ok = logger:update_process_metadata(LoggerContext)
   end.
 
+getPrimaryLevelImpl(Emergency, Alert, Critical, Error, Warning, Notice, Info, Debug) ->
+  fun() ->
+    case maps:get(level, logger:get_primary_config()) of
+      emergency -> Emergency;
+      alert -> Alert;
+      critical -> Critical;
+      error -> Error;
+      warning -> Warning;
+      notice -> Notice;
+      info -> Info;
+      debug -> Debug
+    end
+  end.
+
+setPrimaryLevelImpl(Level) ->
+  fun() ->
+    logger:set_primary_config(level, Level)
+  end.
+
 %%------------------------------------------------------------------------------
 %% Internal
 %%------------------------------------------------------------------------------
+
 purs_metadata_to_erl(Metadata) ->
 
   #{type := Type} = Metadata,
