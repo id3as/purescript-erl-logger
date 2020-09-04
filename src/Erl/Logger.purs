@@ -11,6 +11,8 @@ module Logger
        , addLoggerContext
        , setPrimaryLevel
        , getPrimaryLevel
+       , setHandlerLevel
+       , getHandlerLevel
        , traceMetadata
        , commandMetadata
        , eventMetadata
@@ -54,6 +56,22 @@ instance showLogLevel :: Show LogLevel where
   show Info = "info"
   show Debug = "debug"
 
+derive instance eqLogLevel :: Eq LogLevel
+instance ordLogLevel :: Ord LogLevel where
+  compare lhs rhs = 
+    let
+      toInt :: LogLevel -> Int 
+      toInt Emergency = 0
+      toInt Alert = 1
+      toInt Critical = 2
+      toInt Error = 3
+      toInt Warning = 4
+      toInt Notice = 5
+      toInt Info = 6
+      toInt Debug = 7
+    in
+      compare (toInt lhs) (toInt rhs)
+
 data LogType = Trace
              | Event
              | Command
@@ -94,12 +112,20 @@ foreign import spyImpl :: forall metadata report. MinimalMetadata metadata -> { 
 foreign import addLoggerContext :: forall r. Record r -> Effect Unit
 foreign import getPrimaryLevelImpl :: LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> Effect LogLevel
 foreign import setPrimaryLevelImpl :: Atom -> Effect Unit
+foreign import getHandlerLevelImpl :: LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> Atom -> Effect LogLevel
+foreign import setHandlerLevelImpl :: Atom -> Atom -> Effect Unit
 
 getPrimaryLevel :: Effect LogLevel
 getPrimaryLevel = getPrimaryLevelImpl Emergency Alert Critical Error Warning Notice Info Debug
 
 setPrimaryLevel :: LogLevel -> Effect Unit
 setPrimaryLevel level = setPrimaryLevelImpl $ logLevelToErl level
+
+getHandlerLevel :: Atom -> Effect LogLevel
+getHandlerLevel = getHandlerLevelImpl Emergency Alert Critical Error Warning Notice Info Debug
+
+setHandlerLevel :: LogLevel -> Atom -> Effect Unit
+setHandlerLevel level handlerId  = setHandlerLevelImpl handlerId $ logLevelToErl level
 
 spy :: forall a. SpyWarning => String -> a -> a
 spy str a = unsafePerformEffect do

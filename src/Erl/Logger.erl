@@ -12,7 +12,9 @@
          spyImpl/2,
          addLoggerContext/1,
          getPrimaryLevelImpl/8,
-         setPrimaryLevelImpl/1
+         setPrimaryLevelImpl/1,
+         getHandlerLevelImpl/9,
+         setHandlerLevelImpl/2
         ]).
 
 -define(do_effectful_log(Level, Metadata, Report),
@@ -69,26 +71,40 @@ addLoggerContext(LoggerContext) ->
 
 getPrimaryLevelImpl(Emergency, Alert, Critical, Error, Warning, Notice, Info, Debug) ->
   fun() ->
-    case maps:get(level, logger:get_primary_config()) of
-      emergency -> Emergency;
-      alert -> Alert;
-      critical -> Critical;
-      error -> Error;
-      warning -> Warning;
-      notice -> Notice;
-      info -> Info;
-      debug -> Debug
-    end
+    level_to_purs(Emergency, Alert, Critical, Error, Warning, Notice, Info, Debug, maps:get(level, logger:get_primary_config()))
   end.
 
 setPrimaryLevelImpl(Level) ->
   fun() ->
-    logger:set_primary_config(level, Level)
+    ok = logger:set_primary_config(level, Level)
+  end.
+
+getHandlerLevelImpl(Emergency, Alert, Critical, Error, Warning, Notice, Info, Debug, HandlerId) ->
+  fun() ->
+    {ok, Map} = logger:get_handler_config(HandlerId),
+    level_to_purs(Emergency, Alert, Critical, Error, Warning, Notice, Info, Debug, maps:get(level, Map))
+  end.
+
+setHandlerLevelImpl(HandlerId, Level) ->
+  fun() ->
+    ok = logger:set_handler_config(HandlerId, level, Level)
   end.
 
 %%------------------------------------------------------------------------------
 %% Internal
 %%------------------------------------------------------------------------------
+level_to_purs(Emergency, Alert, Critical, Error, Warning, Notice, Info, Debug, Level) ->
+  case Level of
+    emergency -> Emergency;
+    alert -> Alert;
+    critical -> Critical;
+    error -> Error;
+    warning -> Warning;
+    notice -> Notice;
+    info -> Info;
+    debug -> Debug;
+    all -> Debug
+  end.
 
 purs_metadata_to_erl(Metadata) ->
 
