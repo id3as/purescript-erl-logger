@@ -17,12 +17,12 @@ module Logger
        , commandMetadata
        , eventMetadata
        , genericMetadata
-       , EventType(..)
        , LogType(..)
        , LogLevel(..)
        , MinimalMetadata
-       , MinimalMetadataFields
-       , BasicMetadataFields
+       , BasicMetadata
+       , EventMetadata
+       , CommandMetadata
        , class SpyWarning
        ) where
 
@@ -77,25 +77,49 @@ data LogType = Trace
              | Command
              | Audit
 
-data EventType = Start
-               | Stop
-
-type MinimalMetadataFields a =
-  ( domain :: List Atom
+type MinimalMetadata a =
+  { domain :: List Atom
   , "type" :: LogType
   | a
-  )
+  }
 
-type BasicMetadataFields = MinimalMetadataFields ( text :: String)
+type BasicMetadata = MinimalMetadata ( text :: String )
 
-type EventMetadataFields = MinimalMetadataFields ( event :: EventType
-                                                 , text :: String)
+type EventMetadata eventType = MinimalMetadata ( event :: eventType
+                                               , text :: String)
 
-type MinimalMetadata a = Record (MinimalMetadataFields a)
+type CommandMetadata commandType = MinimalMetadata ( command :: commandType
+                                                   , text :: String)
 
-type BasicMetadata = Record BasicMetadataFields
+type AuditMetadata auditType = MinimalMetadata ( audit :: auditType
+                                               , text :: String)
 
-type EventMetadata = Record EventMetadataFields
+
+traceMetadata :: List Atom -> String -> BasicMetadata
+traceMetadata domain msg =
+  genericMetadata domain Trace msg {}
+
+commandMetadata :: forall commandType. List Atom -> commandType -> String -> CommandMetadata commandType
+commandMetadata domain command msg =
+  genericMetadata domain Command msg {command}
+
+eventMetadata :: forall eventType. List Atom -> eventType -> String -> EventMetadata eventType
+eventMetadata domain event msg =
+  genericMetadata domain Event msg {event}
+
+auditMetadata :: forall auditType. List Atom -> auditType -> String -> AuditMetadata auditType
+auditMetadata domain audit msg =
+  genericMetadata domain Audit msg {audit}
+
+genericMetadata :: forall metadata.
+                   Row.Lacks "domain" metadata =>
+                   Row.Lacks "type" metadata =>
+                   Row.Lacks "text" metadata =>
+                   List Atom -> LogType -> String -> Record metadata -> MinimalMetadata (text :: String | metadata)
+genericMetadata domain logType msg metadata  =
+  Builder.build (Builder.insert (SProxy :: SProxy "domain") domain >>>
+                 Builder.insert (SProxy :: SProxy "type") logType >>>
+                 Builder.insert (SProxy :: SProxy "text") msg) metadata
 
 class SpyWarning
 instance warn :: Warn (Text "Logger.spy usage") => SpyWarning
@@ -133,33 +157,6 @@ spy str a = unsafePerformEffect do
           , "type": Trace
           , text: str} {spydata: a}
   pure a
-
-traceMetadata :: List Atom -> String -> BasicMetadata
-traceMetadata domain msg = { domain
-                           , text: msg
-                           , "type": Trace }
-
-commandMetadata :: List Atom -> String -> BasicMetadata
-commandMetadata domain msg = { domain
-                             , text: msg
-                             , "type": Command }
-
-eventMetadata :: List Atom -> EventType -> String -> EventMetadata
-eventMetadata domain event msg = { domain
-                                 , text: msg
-                                 , "type": Event
-                                 , event}
-
-genericMetadata :: forall metadata.
-                   Row.Lacks "domain" metadata =>
-                   Row.Lacks "type" metadata =>
-                   Row.Lacks "text" metadata =>
-                   List Atom -> String -> Record metadata -> MinimalMetadata (text :: String | metadata)
-genericMetadata domain msg metadata  =
-  Builder.build (Builder.insert (SProxy :: SProxy "domain") domain >>>
-                 Builder.insert (SProxy :: SProxy "type") Trace >>>
-                 Builder.insert (SProxy :: SProxy "text") msg) metadata
-
 
 logLevelToErl :: LogLevel -> Atom
 logLevelToErl Emergency = atom "emergency"
