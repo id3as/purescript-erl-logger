@@ -17,6 +17,7 @@ module Logger
        , commandMetadata
        , eventMetadata
        , genericMetadata
+       , logLevelToErl
        , LogType(..)
        , LogLevel(..)
        , MinimalMetadata
