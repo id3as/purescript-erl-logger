@@ -10,6 +10,16 @@
          info/2,
          debug/2,
          spyImpl/2,
+         unsafeGetCurrentLocation/0,
+         unsafeGetCallingLocation/0,
+         'emergency\''/3,
+         'alert\''/3,
+         'critical\''/3,
+         'error\''/3,
+         'warning\''/3,
+         'notice\''/3,
+         'info\''/3,
+         'debug\''/3,
          addLoggerContext/1,
          getPrimaryLevelImpl/8,
          setPrimaryLevelImpl/1,
@@ -17,25 +27,43 @@
          setHandlerLevelImpl/2
         ]).
 
--define(do_effectful_log(Level, Metadata, Report),
-        [{current_stacktrace, Stack}] = erlang:process_info(self(), [current_stacktrace]),
-        fun() ->
-            {Module, Fun, Arity, File, Line} = walk_stack(Stack),
+-define(do_effectful_log_with_location(Level, Metadata, Report, Loc0),
+  fun() ->
+    {Module, Fun, Arity, File, Line} = Loc0,
+    case logger:allow(Level, Module) of
+      true ->
+        Loc = #{mfa => {Module, Fun, Arity},
+                      line => Line,
+                      file => File},
 
-            case logger:allow(Level, Module) of
-              true ->
-                Location = #{mfa => {Module, Fun, Arity},
-                             line => Line,
-                             file => File},
+        ErlMetadata = purs_metadata_to_erl(Metadata),
 
-                ErlMetadata = purs_metadata_to_erl(Metadata),
+        apply(logger, macro_log, [Loc, Level, Report, ErlMetadata]),
+        unit;
+      false ->
+        unit
+    end  
+  end).
 
-                apply(logger, macro_log, [Location, Level, Report, ErlMetadata]),
-                unit;
-              false ->
-                unit
-            end
-        end).
+-define(do_effectful_log(Level, Metadata, Report), 
+    [{current_stacktrace, Stack}] = erlang:process_info(self(), [current_stacktrace]),
+    fun() ->
+      {Module, Fun, Arity, File, Line} = walk_stack(Stack, 0),
+      case logger:allow(Level, Module) of
+        true ->
+          Location = #{mfa => {Module, Fun, Arity},
+                        line => Line,
+                        file => File},
+
+          ErlMetadata = purs_metadata_to_erl(Metadata),
+
+          apply(logger, macro_log, [Location, Level, Report, ErlMetadata]),
+          unit;
+        false ->
+          unit
+      end
+    end
+  ).
 
 emergency(Metadata, Report) ->
   ?do_effectful_log(emergency, Metadata, Report).
@@ -63,6 +91,40 @@ debug(Metadata, Report) ->
 
 spyImpl(Metadata, Report) ->
   ?do_effectful_log(notice, Metadata, Report).
+
+unsafeGetCurrentLocation() ->
+  [{current_stacktrace, Stack}] = erlang:process_info(self(), [current_stacktrace]),
+  walk_stack(Stack, 0).
+
+unsafeGetCallingLocation() ->
+  [{current_stacktrace, Stack}] = erlang:process_info(self(), [current_stacktrace]),
+  walk_stack(Stack, 1).
+
+
+'emergency\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(emergency, Metadata, Report, Location).
+
+'alert\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(alert, Metadata, Report, Location).
+
+'critical\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(critical, Metadata, Report, Location).
+
+'error\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(error, Metadata, Report, Location).
+
+'warning\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(warning, Metadata, Report, Location).
+
+'notice\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(notice, Metadata, Report, Location).
+
+'info\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(info, Metadata, Report, Location).
+
+'debug\''(Location, Metadata, Report) ->
+  ?do_effectful_log_with_location(debug, Metadata, Report, Location).
+
 
 addLoggerContext(LoggerContext) ->
   fun() ->
@@ -129,24 +191,25 @@ purs_metadata_to_erl(Metadata) ->
 
   Metadata4.
 
-walk_stack([_LoggerFrame | Stack = [{TopModule, TopFun, TopArity, [{file, TopFile}, {line, TopLine}]} | _]]) ->
-  walk_stack_internal({TopModule, TopFun, TopArity, TopFile, TopLine}, Stack).
+walk_stack([_LoggerFrame | Stack = [{TopModule, TopFun, TopArity, [{file, TopFile}, {line, TopLine}]} | _]], Skip) ->
+  walk_stack_internal({TopModule, TopFun, TopArity, TopFile, TopLine}, Stack, Skip).
 
-walk_stack_internal(Default, [{Module, Fun, Arity, [{file, File}, {line, Line}]} | Rest]) ->
+walk_stack_internal(Default, [{Module, Fun, Arity, [{file, File}, {line, Line}]} | Rest], Skip) ->
   ModuleStr = atom_to_list(Module),
-  case string:prefix(ModuleStr, "logger@ps") of
-    nomatch ->
+  case Module =:= logger@ps of
+    true -> walk_stack_internal(Default, Rest, Skip);
+    false -> 
+      ModuleStr = atom_to_list(Module),
       case string:find(ModuleStr, "@ps") of
-        "@ps" ->
+        "@ps" when Skip =:= 0 ->
           {format(ModuleStr), Fun, Arity, File, Line};
+        "@ps" when Skip > 0 ->
+          walk_stack_internal(Default, Rest, Skip-1);
         _ ->
-          walk_stack_internal(Default, Rest)
-      end;
-    _ ->
-      walk_stack_internal(Default, Rest)
+          walk_stack_internal(Default, Rest, Skip)
+      end
   end;
-
-walk_stack_internal(Default, []) -> Default.
+walk_stack_internal(Default, [], _Skip) -> Default.
 
 format(Str) ->
   list_to_atom(string:join([camel(Token) || Token <- string:tokens(Str, "_")], ".")).

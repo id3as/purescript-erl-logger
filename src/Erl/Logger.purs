@@ -8,6 +8,16 @@ module Logger
        , info
        , debug
        , spy
+       , emergency'
+       , alert'
+       , critical'
+       , error'
+       , warning'
+       , notice'
+       , info'
+       , debug'
+       , unsafeGetCurrentLocation
+       , unsafeGetCallingLocation
        , addLoggerContext
        , setPrimaryLevel
        , getPrimaryLevel
@@ -20,14 +30,16 @@ module Logger
        , logLevelToErl
        , LogType(..)
        , LogLevel(..)
-       , MinimalMetadata
+       , MinimalMetadata 
        , BasicMetadata
        , EventMetadata
        , CommandMetadata
        , class SpyWarning
+       , Location 
        ) where
 
 import Prelude
+
 
 import Data.Symbol (SProxy(..))
 import Effect (Effect)
@@ -112,6 +124,7 @@ auditMetadata :: forall auditType. List Atom -> auditType -> String -> AuditMeta
 auditMetadata domain audit msg =
   genericMetadata domain Audit msg {audit}
 
+
 genericMetadata :: forall metadata.
                    Row.Lacks "domain" metadata =>
                    Row.Lacks "type" metadata =>
@@ -139,6 +152,24 @@ foreign import getPrimaryLevelImpl :: LogLevel -> LogLevel -> LogLevel -> LogLev
 foreign import setPrimaryLevelImpl :: Atom -> Effect Unit
 foreign import getHandlerLevelImpl :: LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> LogLevel -> Atom -> Effect LogLevel
 foreign import setHandlerLevelImpl :: Atom -> Atom -> Effect Unit
+
+foreign import data Location :: Type
+
+-- | Get the current stack of the running process
+-- | This is unsafe in the sense it is not referentially transparent, it is specifically not in Effect as
+-- | the run-time stack at the time the effect is forced is not generally interesting for logging
+foreign import unsafeGetCurrentLocation :: Location
+
+foreign import unsafeGetCallingLocation :: Location
+
+foreign import emergency' :: forall metadata report.Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
+foreign import alert' :: forall metadata report. Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
+foreign import critical' :: forall metadata report. Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
+foreign import error' :: forall metadata report. Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
+foreign import warning' :: forall metadata report. Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
+foreign import notice' :: forall metadata report. Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
+foreign import info' :: forall metadata report. Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
+foreign import debug' :: forall metadata report. Location -> MinimalMetadata metadata -> { | report } -> Effect Unit
 
 getPrimaryLevel :: Effect LogLevel
 getPrimaryLevel = getPrimaryLevelImpl Emergency Alert Critical Error Warning Notice Info Debug

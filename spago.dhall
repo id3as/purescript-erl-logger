@@ -1,11 +1,6 @@
-{ name =
-    "purescript-erl-maps"
-, backend =
-    "purerl"
-, dependencies =
-    [ "prelude", "erl-atom", "erl-lists", "record" ]
-, packages =
-    ./packages.dhall
-, sources =
-    [ "src/**/*.purs" ]
+{ name = "purescript-erl-maps"
+, backend = "purerl"
+, dependencies = [ "effect", "erl-atom", "erl-lists", "prelude", "record" ]
+, packages = ./packages.dhall
+, sources = [ "src/**/*.purs" ]
 }
