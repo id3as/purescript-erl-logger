@@ -9,17 +9,33 @@
          notice/2,
          info/2,
          debug/2,
+         'emergency\''/2,
+         'alert\''/2,
+         'critical\''/2,
+         'error\''/2,
+         'warning\''/2,
+         'notice\''/2,
+         'info\''/2,
+         'debug\''/2,
          spyImpl/2,
          unsafeGetCurrentLocation/0,
          unsafeGetCallingLocation/0,
-         'emergency\''/3,
-         'alert\''/3,
-         'critical\''/3,
-         'error\''/3,
-         'warning\''/3,
-         'notice\''/3,
-         'info\''/3,
-         'debug\''/3,
+         emergencyWithLocation/3,
+         alertWithLocation/3,
+         criticalWithLocation/3,
+         errorWithLocation/3,
+         warningWithLocation/3,
+         noticeWithLocation/3,
+         infoWithLocation/3,
+         debugWithLocation/3,
+         'emergencyWithLocation\''/3,
+         'alertWithLocation\''/3,
+         'criticalWithLocation\''/3,
+         'errorWithLocation\''/3,
+         'warningWithLocation\''/3,
+         'noticeWithLocation\''/3,
+         'infoWithLocation\''/3,
+         'debugWithLocation\''/3,
          addLoggerContext/1,
          getPrimaryLevelImpl/8,
          setPrimaryLevelImpl/1,
@@ -38,7 +54,7 @@
 
         ErlMetadata = purs_metadata_to_erl(Metadata),
 
-        apply(logger, macro_log, [Loc, Level, Report, ErlMetadata]),
+        logger:macro_log(Loc, Level, Report, ErlMetadata),
         unit;
       false ->
         unit
@@ -57,7 +73,7 @@
 
           ErlMetadata = purs_metadata_to_erl(Metadata),
 
-          apply(logger, macro_log, [Location, Level, Report, ErlMetadata]),
+          logger:macro_log(Location, Level, Report, ErlMetadata),
           unit;
         false ->
           unit
@@ -89,6 +105,30 @@ info(Metadata, Report) ->
 debug(Metadata, Report) ->
   ?do_effectful_log(debug, Metadata, Report).
 
+'emergency\''(Metadata, Report) ->
+  ?do_effectful_log(emergency, Metadata, {Report, unit}).
+
+'alert\''(Metadata, Report) ->
+  ?do_effectful_log(alert, Metadata, {Report, unit}).
+
+'critical\''(Metadata, Report) ->
+  ?do_effectful_log(critical, Metadata, {Report, unit}).
+
+'error\''(Metadata, Report) ->
+  ?do_effectful_log(error, Metadata, {Report, unit}).
+
+'warning\''(Metadata, Report) ->
+  ?do_effectful_log(warning, Metadata, {Report, unit}).
+
+'notice\''(Metadata, Report) ->
+  ?do_effectful_log(notice, Metadata, {Report, unit}).
+
+'info\''(Metadata, Report) ->
+  ?do_effectful_log(info, Metadata, {Report, unit}).
+
+'debug\''(Metadata, Report) ->
+  ?do_effectful_log(debug, Metadata, {Report, unit}).
+
 spyImpl(Metadata, Report) ->
   ?do_effectful_log(notice, Metadata, Report).
 
@@ -101,29 +141,53 @@ unsafeGetCallingLocation() ->
   walk_stack(Stack, 1).
 
 
-'emergency\''(Location,Metadata, Report) ->
+emergencyWithLocation(Location,Metadata, Report) ->
   ?do_effectful_log_with_location(emergency, Metadata, Report, Location).
 
-'alert\''(Location,Metadata, Report) ->
+alertWithLocation(Location,Metadata, Report) ->
   ?do_effectful_log_with_location(alert, Metadata, Report, Location).
 
-'critical\''(Location,Metadata, Report) ->
+criticalWithLocation(Location,Metadata, Report) ->
   ?do_effectful_log_with_location(critical, Metadata, Report, Location).
 
-'error\''(Location,Metadata, Report) ->
+errorWithLocation(Location,Metadata, Report) ->
   ?do_effectful_log_with_location(error, Metadata, Report, Location).
 
-'warning\''(Location,Metadata, Report) ->
+warningWithLocation(Location,Metadata, Report) ->
   ?do_effectful_log_with_location(warning, Metadata, Report, Location).
 
-'notice\''(Location,Metadata, Report) ->
+noticeWithLocation(Location,Metadata, Report) ->
   ?do_effectful_log_with_location(notice, Metadata, Report, Location).
 
-'info\''(Location,Metadata, Report) ->
+infoWithLocation(Location,Metadata, Report) ->
   ?do_effectful_log_with_location(info, Metadata, Report, Location).
 
-'debug\''(Location, Metadata, Report) ->
+debugWithLocation(Location, Metadata, Report) ->
   ?do_effectful_log_with_location(debug, Metadata, Report, Location).
+
+'emergencyWithLocation\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(emergency, Metadata, {Report, unit}, Location).
+
+'alertWithLocation\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(alert, Metadata, {Report, unit}, Location).
+
+'criticalWithLocation\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(critical, Metadata, {Report, unit}, Location).
+
+'errorWithLocation\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(error, Metadata, {Report, unit}, Location).
+
+'warningWithLocation\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(warning, Metadata, {Report, unit}, Location).
+
+'noticeWithLocation\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(notice, Metadata, {Report, unit}, Location).
+
+'infoWithLocation\''(Location,Metadata, Report) ->
+  ?do_effectful_log_with_location(info, Metadata, {Report, unit}, Location).
+
+'debugWithLocation\''(Location, Metadata, Report) ->
+  ?do_effectful_log_with_location(debug, Metadata, {Report, unit}, Location).
 
 
 addLoggerContext(LoggerContext) ->
