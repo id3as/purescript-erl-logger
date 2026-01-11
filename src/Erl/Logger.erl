@@ -250,7 +250,7 @@ purs_metadata_to_erl(Metadata) ->
 
   Metadata4 = case maps:get(text, Metadata3, undefined) of
                 undefined -> Metadata3;
-                Value -> maps:put(text, binary_to_list(Value), Metadata3)
+                Value -> maps:put(text, unicode:characters_to_list(Value, utf8), Metadata3)
               end,
 
   Metadata4.
